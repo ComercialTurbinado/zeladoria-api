@@ -37,6 +37,9 @@ router.get('/export', authMiddleware, ctrl.exportar)
 // Consulta pública — usada pelo N8N Flow 2
 // GET /ocorrencias/consulta?protocolo=ZLD-2024-001 OU ?telefone=5511999990001
 router.get('/consulta', ctrl.consultar)
+// Andamento detalhado por protocolo
+// GET /ocorrencias/status?protocolo=ZLD-2024-001
+router.get('/status', ctrl.consultarStatusDetalhado)
 
 // CRUD
 router.get('/', authMiddleware, ctrl.listar)

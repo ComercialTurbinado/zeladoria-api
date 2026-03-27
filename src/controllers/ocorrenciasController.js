@@ -181,6 +181,73 @@ async function consultar(req, res) {
   }
 }
 
+// GET /ocorrencias/status?protocolo=ZLD-2024-001
+// Retorna andamento detalhado por protocolo para acompanhamento
+async function consultarStatusDetalhado(req, res) {
+  try {
+    const { protocolo } = req.query
+
+    if (!protocolo) {
+      return res.status(400).json({ erro: 'Informe protocolo para consulta' })
+    }
+
+    const protocoloNorm = String(protocolo).trim().toUpperCase()
+    const oc = await Ocorrencia.findOne({
+      protocolo: { $regex: new RegExp(`^${protocoloNorm}$`, 'i') },
+    }).lean()
+
+    if (!oc) {
+      return res.json({
+        encontrado: false,
+        mensagem: `Protocolo ${protocoloNorm} não encontrado`,
+        ocorrencia: null,
+      })
+    }
+
+    const ultimo = oc.logs?.[oc.logs.length - 1] || null
+    const historico = (oc.logs || [])
+      .slice(-5)
+      .reverse()
+      .map((l) => ({
+        status_anterior: l.status_anterior || null,
+        status_novo: l.status_novo,
+        observacao: l.observacao || '',
+        admin: l.admin || 'Sistema',
+        data: l.data,
+      }))
+
+    return res.json({
+      encontrado: true,
+      ocorrencia: {
+        protocolo: oc.protocolo,
+        status: oc.status,
+        criticidade: oc.criticidade,
+        categoria: oc.categoria,
+        descricao: oc.descricao || '',
+        bairro: oc.bairro || '',
+        rua: oc.rua || '',
+        created_at: oc.created_at,
+        updated_at: oc.updated_at,
+        total_atualizacoes: oc.logs?.length || 0,
+        total_midias: oc.midias?.length || 0,
+        ultimo_log: ultimo
+          ? {
+              status_anterior: ultimo.status_anterior || null,
+              status_novo: ultimo.status_novo,
+              observacao: ultimo.observacao || '',
+              admin: ultimo.admin || 'Sistema',
+              data: ultimo.data,
+            }
+          : null,
+        historico,
+      },
+    })
+  } catch (err) {
+    console.error('Erro consultarStatusDetalhado:', err)
+    return res.status(500).json({ erro: 'Erro ao consultar status da ocorrência' })
+  }
+}
+
 // GET /ocorrencias/:id
 async function buscarPorId(req, res) {
   try {
@@ -318,4 +385,4 @@ async function uploadMidia(req, res) {
   }
 }
 
-module.exports = { listar, exportar, consultar, buscarPorId, atualizarStatus, criar, uploadMidia }
+module.exports = { listar, exportar, consultar, consultarStatusDetalhado, buscarPorId, atualizarStatus, criar, uploadMidia }
